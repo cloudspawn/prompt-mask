@@ -1,3 +1,10 @@
+#!/bin/bash
+# ============================================
+# COMMIT 2: Web app — core seal/unseal with mini-language
+# ============================================
+# Run from inside prompt-mask/
+
+cat > app/index.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -538,3 +545,29 @@ loadDictionary();
 </script>
 </body>
 </html>
+HTMLEOF
+
+# ============================================
+# Git commit
+# ============================================
+git add -A
+git commit -m "feat: web app with seal/unseal, context menu, shortcuts
+
+- Core seal/unseal engine with mini-language (***{} ###{} \$\$\${})
+- Right-click context menu on text selection
+- Keyboard shortcuts (Ctrl+1/2/3)
+- Toolbar buttons for marking
+- Auto-type detection (name, email, company, project, amount)
+- Consistent dictionary (same input = same fake output)
+- Dictionary persistence via localStorage
+- Copy to clipboard
+- Stats bar (markers count, dictionary size)
+- Privacy banner with network indicator
+- Responsive layout (mobile support)
+- Dark theme, DM Mono + Anybody fonts
+- Zero dependencies, single HTML file"
+
+echo ""
+echo "✅ Commit 2 done!"
+echo "Open app/index.html in a browser to test."
+echo ""
