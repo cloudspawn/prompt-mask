@@ -77,12 +77,31 @@
         }
         .project-selector select:focus { border-color: var(--accent-dim); }
 
+        /* ── Mode toggle ── */
+        .mode-toggle {
+            display: flex; border: 1px solid var(--border); border-radius: var(--radius);
+            overflow: hidden; margin: 16px 40px 0;
+        }
+        .mode-toggle button {
+            flex: 1; border: none; border-radius: 0;
+            padding: 8px 20px; font-size: 12px;
+            font-family: 'Anybody', sans-serif; font-weight: 600;
+            letter-spacing: 0.5px; transition: all 0.15s;
+            background: transparent; color: var(--text-muted);
+        }
+        .mode-toggle button.active {
+            background: var(--accent); color: var(--bg);
+        }
+        .mode-toggle button:not(.active):hover {
+            background: var(--surface-hover);
+        }
+
         /* ── Workspace ── */
         .workspace {
             flex: 1; display: grid; grid-template-columns: 1fr 1fr;
-            padding: 20px 40px; gap: 0; min-height: 0;
+            padding: 16px 40px; gap: 0; min-height: 0;
         }
-        .panel { display: flex; flex-direction: column; min-height: 300px; }
+        .panel { display: flex; flex-direction: column; min-height: 280px; }
         .panel:first-child { padding-right: 16px; border-right: 1px solid var(--border); }
         .panel:last-child { padding-left: 16px; }
         .panel-header {
@@ -93,6 +112,10 @@
             font-family: 'Anybody', sans-serif; font-weight: 600;
             font-size: 11px; text-transform: uppercase;
             letter-spacing: 1.5px; color: var(--text-muted);
+        }
+        .panel-hint {
+            font-size: 10px; color: var(--text-muted);
+            font-style: italic; margin-bottom: 6px;
         }
 
         textarea {
@@ -136,11 +159,10 @@
             display: flex; align-items: center; justify-content: center;
             gap: 12px; padding: 0 40px 12px;
         }
-        .action-bar button {
+        .action-bar button.go-btn {
             font-family: 'Anybody', sans-serif;
-            font-weight: 600; font-size: 13px; padding: 10px 32px;
+            font-weight: 600; font-size: 13px; padding: 10px 40px;
         }
-        .action-bar .arrow { color: var(--text-muted); font-size: 18px; }
 
         /* ── Context menu ── */
         .ctx-menu {
@@ -177,7 +199,6 @@
             transition: max-height 0.3s ease;
         }
         .dict-panel.open { max-height: 600px; overflow-y: auto; }
-
         .dict-header {
             display: flex; align-items: center; justify-content: space-between;
             padding: 12px 40px; position: sticky; top: 0;
@@ -189,10 +210,8 @@
             letter-spacing: 1.5px; color: var(--text-muted);
         }
         .dict-actions { display: flex; gap: 6px; }
-
         .dict-table {
-            width: 100%; padding: 0 40px 16px;
-            border-collapse: collapse;
+            width: 100%; padding: 0 40px 16px; border-collapse: collapse;
         }
         .dict-table th {
             text-align: left; font-size: 10px; color: var(--text-muted);
@@ -204,33 +223,26 @@
             border-bottom: 1px solid var(--border);
         }
         .dict-table tr:hover { background: var(--surface-hover); }
-        .dict-table .type-badge {
+        .type-badge {
             font-size: 9px; padding: 2px 6px;
-            border-radius: 4px; text-transform: uppercase;
-            letter-spacing: 0.5px;
+            border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .type-badge.identity { background: var(--anon-bg, rgba(245,158,11,0.12)); color: var(--anon); }
-        .type-badge.amount { background: var(--random-bg, rgba(139,92,246,0.12)); color: var(--random); }
+        .type-badge.identity { background: rgba(245,158,11,0.12); color: var(--anon); }
+        .type-badge.amount { background: rgba(139,92,246,0.12); color: var(--random); }
         .type-badge.date { background: rgba(34,197,94,0.12); color: var(--success); }
         .type-badge.text { background: rgba(113,113,122,0.12); color: var(--text-muted); }
         .type-badge.blocked { background: rgba(239,68,68,0.12); color: var(--block); }
-
         .dict-table .del-btn {
             background: none; border: none; color: var(--text-muted);
-            cursor: pointer; padding: 2px 6px; font-size: 14px;
-            border-radius: 4px;
+            cursor: pointer; padding: 2px 6px; font-size: 14px; border-radius: 4px;
         }
         .dict-table .del-btn:hover { color: var(--block); background: rgba(239,68,68,0.1); }
-
         .dict-empty {
             text-align: center; padding: 24px 40px;
             color: var(--text-muted); font-size: 12px; font-style: italic;
         }
-
-        /* ── Add entry row ── */
         .add-entry {
-            display: flex; gap: 8px; padding: 0 40px 12px;
-            align-items: center;
+            display: flex; gap: 8px; padding: 0 40px 12px; align-items: center;
         }
         .add-entry input {
             font-family: 'DM Mono', monospace; font-size: 12px;
@@ -250,8 +262,7 @@
         .modal-overlay.visible { display: flex; }
         .modal {
             background: var(--surface); border: 1px solid var(--border);
-            border-radius: 12px; padding: 24px; min-width: 360px;
-            max-width: 500px;
+            border-radius: 12px; padding: 24px; min-width: 360px; max-width: 500px;
         }
         .modal h3 {
             font-family: 'Anybody', sans-serif; font-weight: 600;
@@ -266,7 +277,6 @@
         .modal input[type="text"]:focus { border-color: var(--accent-dim); }
         .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 
-        /* ── Hidden file input ── */
         #importFile { display: none; }
 
         /* ── Responsive ── */
@@ -274,8 +284,10 @@
             .workspace { grid-template-columns: 1fr; }
             .panel:first-child { padding-right: 0; border-right: none; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
             .panel:last-child { padding-left: 0; padding-top: 16px; }
-            header, .action-bar, .stats-bar, .dict-header, .dict-table, .add-entry { padding-left: 20px; padding-right: 20px; }
-            .workspace { padding: 20px; }
+            header, .action-bar, .stats-bar, .dict-header, .add-entry { padding-left: 20px; padding-right: 20px; }
+            .dict-table { padding: 0 20px 16px; }
+            .workspace { padding: 16px 20px; }
+            .mode-toggle { margin: 16px 20px 0; }
             header { flex-direction: column; align-items: flex-start; gap: 12px; }
         }
     </style>
@@ -305,41 +317,51 @@
     </div>
 </header>
 
+<!-- Mode toggle -->
+<div class="mode-toggle">
+    <button id="modeSealBtn" class="active" onclick="setMode('seal')">⬇ SEAL — Mask before sending</button>
+    <button id="modeUnsealBtn" onclick="setMode('unseal')">⬆ UNSEAL — Restore AI response</button>
+</div>
+
 <!-- Workspace -->
 <div class="workspace">
+    <!-- Input panel -->
     <div class="panel">
         <div class="panel-header">
-            <span class="panel-label">Your prompt</span>
+            <span class="panel-label" id="inputLabel">Your prompt</span>
+            <button id="pasteBtn" onclick="pasteFromClipboard()" style="display:none">📋 Paste from clipboard</button>
         </div>
-        <div class="toolbar">
-            <button onclick="wrapSelection('anon')" title="Anonymize selection">
-                <span class="marker-dot anon"></span> Anonymize <span class="shortcut">Ctrl+1</span>
-            </button>
-            <button onclick="wrapSelection('block')" title="Block selection">
-                <span class="marker-dot block"></span> Block <span class="shortcut">Ctrl+2</span>
-            </button>
-            <button onclick="wrapSelection('random')" title="Randomize selection">
-                <span class="marker-dot random"></span> Randomize <span class="shortcut">Ctrl+3</span>
-            </button>
+        <div id="toolbarWrap">
+            <div class="toolbar" id="sealToolbar">
+                <button onclick="wrapSelection('anon')" title="Replace with fake data — reversible with unseal">
+                    <span class="marker-dot anon"></span> Anonymize <span class="shortcut">Ctrl+1</span>
+                </button>
+                <button onclick="wrapSelection('block')" title="Permanently redact — NOT reversible">
+                    <span class="marker-dot block"></span> Block <span class="shortcut">Ctrl+2</span>
+                </button>
+                <button onclick="wrapSelection('random')" title="Replace with random value — reversible with unseal">
+                    <span class="marker-dot random"></span> Randomize <span class="shortcut">Ctrl+3</span>
+                </button>
+            </div>
         </div>
-        <textarea id="input" placeholder="Type or paste your prompt here...&#10;&#10;Mark sensitive data:&#10;  Select text → right-click → choose action&#10;  Or type: ***{name}  ---{secret}  +++{amount}&#10;  Or use toolbar buttons / Ctrl+1,2,3"></textarea>
+        <div class="panel-hint" id="inputHint">***{} anonymize (reversible) · ---{} block (permanent) · +++{} randomize (reversible)</div>
+        <textarea id="input" placeholder="Type or paste your prompt here..."></textarea>
     </div>
+    <!-- Output panel -->
     <div class="panel">
         <div class="panel-header">
-            <span class="panel-label">Masked output</span>
+            <span class="panel-label" id="outputLabel">Masked output</span>
             <button id="copyBtn" onclick="copyOutput()">Copy</button>
         </div>
-        <div class="toolbar" style="visibility:hidden"></div>
+        <div class="panel-hint" id="outputHint">Copy this and paste it into your AI tool.</div>
         <textarea id="output" readonly placeholder="Masked prompt will appear here..."></textarea>
     </div>
 </div>
 
 <!-- Action bar -->
 <div class="action-bar">
-    <button class="primary seal-btn" onclick="seal()">⬇ SEAL</button>
-    <span class="arrow">⇄</span>
-    <button class="seal-btn" onclick="unseal()">⬆ UNSEAL</button>
-    <button style="margin-left:24px" onclick="clearAll()">Clear</button>
+    <button class="primary go-btn" id="goBtn" onclick="go()">⬇ SEAL</button>
+    <button onclick="clearAll()">Clear</button>
 </div>
 
 <!-- Stats bar -->
@@ -405,7 +427,58 @@
 // STATE
 // ════════════════════════════════════════════
 let currentProject = 'default';
-let projects = {};   // { projectName: { dict: {real→fake}, rdict: {fake→real}, types: {real→type} } }
+let projects = {};
+let currentMode = 'seal'; // 'seal' or 'unseal'
+
+// ════════════════════════════════════════════
+// MODE SWITCHING
+// ════════════════════════════════════════════
+function setMode(mode) {
+    currentMode = mode;
+    const isSeal = mode === 'seal';
+
+    document.getElementById('modeSealBtn').classList.toggle('active', isSeal);
+    document.getElementById('modeUnsealBtn').classList.toggle('active', !isSeal);
+
+    document.getElementById('inputLabel').textContent = isSeal ? 'Your prompt' : 'Paste AI response here';
+    document.getElementById('outputLabel').textContent = isSeal ? 'Masked output' : 'Unmasked result (real data restored)';
+
+    document.getElementById('inputHint').textContent = isSeal
+        ? '***{} anonymize (reversible) · ---{} block (permanent) · +++{} randomize (reversible)'
+        : 'Paste the AI response below. All masked names/values will be restored to the real ones.';
+    document.getElementById('outputHint').textContent = isSeal
+        ? 'Copy this and paste it into your AI tool.'
+        : 'This is the final result with your real data.';
+
+    document.getElementById('input').placeholder = isSeal
+        ? 'Type or paste your prompt here...'
+        : 'Paste the AI response here...\n\nAll fake names and values from the dictionary will be\nreplaced with the real ones.';
+
+    document.getElementById('sealToolbar').style.display = isSeal ? 'flex' : 'none';
+    document.getElementById('pasteBtn').style.display = isSeal ? 'none' : 'inline-flex';
+
+    document.getElementById('goBtn').textContent = isSeal ? '⬇ SEAL' : '⬆ UNSEAL';
+    document.getElementById('goBtn').classList.toggle('primary', isSeal);
+
+    document.getElementById('input').value = '';
+    document.getElementById('output').value = '';
+}
+
+function go() {
+    if (currentMode === 'seal') seal();
+    else unseal();
+}
+
+// ════════════════════════════════════════════
+// PASTE FROM CLIPBOARD (unseal mode)
+// ════════════════════════════════════════════
+function pasteFromClipboard() {
+    navigator.clipboard.readText().then(text => {
+        document.getElementById('input').value = text;
+    }).catch(() => {
+        document.getElementById('input').focus();
+    });
+}
 
 // ════════════════════════════════════════════
 // FAKE DATA POOLS
@@ -456,9 +529,7 @@ function removeMapping(real) {
 }
 
 function initProject(name) {
-    if (!projects[name]) {
-        projects[name] = { dict: {}, rdict: {}, types: {} };
-    }
+    if (!projects[name]) projects[name] = { dict: {}, rdict: {}, types: {} };
 }
 
 // ════════════════════════════════════════════
@@ -487,7 +558,6 @@ function generateFake(value, type) {
 function randomizeValue(value) {
     const v = value.trim();
 
-    // Try as number/amount
     const amountMatch = v.match(/^([^\d]*)(\d[\d\s.,]*)(\s*[€$£¥kKmM%]*.*)$/);
     if (amountMatch) {
         const prefix = amountMatch[1];
@@ -500,7 +570,6 @@ function randomizeValue(value) {
         }
     }
 
-    // Try as date (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd)
     const dateMatch = v.match(/^(\d{1,4})([\/-])(\d{1,2})\2(\d{1,4})$/);
     if (dateMatch) {
         const offset = Math.floor(Math.random() * 60) - 30;
@@ -523,7 +592,6 @@ function randomizeValue(value) {
         }
     }
 
-    // Any other text: shuffle preserving shape
     const chars = v.split('');
     for (let i = chars.length - 1; i > 0; i--) {
         const c = chars[i];
@@ -552,10 +620,16 @@ function seal() {
         return fake;
     });
 
+    const redactedMap = {};
+    let redactedIdx = 0;
     output = output.replace(/---\{([^}]*)\}/g, (_, value) => {
         blockCount++;
-        if (value) setMapping(value, '[REDACTED]', 'blocked');
-        return '[REDACTED]';
+        if (value && redactedMap[value] !== undefined) {
+            return '[REDACTED:' + redactedMap[value] + ']';
+        }
+        redactedIdx++;
+        if (value) redactedMap[value] = redactedIdx;
+        return '[REDACTED:' + redactedIdx + ']';
     });
 
     output = output.replace(/\+\+\+\{([^}]+)\}/g, (_, value) => {
@@ -611,6 +685,7 @@ function wrapSelection(type) {
 // ════════════════════════════════════════════
 const ctxMenu = document.getElementById('ctxMenu');
 document.getElementById('input').addEventListener('contextmenu', (e) => {
+    if (currentMode !== 'seal') return;
     const textarea = document.getElementById('input');
     const selected = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
     if (selected) {
@@ -628,6 +703,7 @@ function hideContextMenu() { ctxMenu.classList.remove('visible'); }
 // KEYBOARD SHORTCUTS
 // ════════════════════════════════════════════
 document.addEventListener('keydown', (e) => {
+    if (currentMode !== 'seal') return;
     if (e.ctrlKey || e.metaKey) {
         if (e.key === '1') { e.preventDefault(); wrapSelection('anon'); }
         if (e.key === '2') { e.preventDefault(); wrapSelection('block'); }
@@ -666,8 +742,7 @@ function updateStats(anon, block, random) {
 // DICTIONARY PANEL
 // ════════════════════════════════════════════
 function toggleDict() {
-    const panel = document.getElementById('dictPanel');
-    panel.classList.toggle('open');
+    document.getElementById('dictPanel').classList.toggle('open');
     renderDict();
 }
 
@@ -688,12 +763,7 @@ function renderDict() {
     let html = '<table class="dict-table"><thead><tr><th>Real</th><th>Masked</th><th>Type</th><th></th></tr></thead><tbody>';
     for (const [real, fake] of entries) {
         const type = types[real] || 'identity';
-        html += `<tr>
-            <td>${escHtml(real)}</td>
-            <td>${escHtml(fake)}</td>
-            <td><span class="type-badge ${type}">${type}</span></td>
-            <td><button class="del-btn" onclick="deleteEntry('${escAttr(real)}')" title="Delete">×</button></td>
-        </tr>`;
+        html += '<tr><td>' + escHtml(real) + '</td><td>' + escHtml(fake) + '</td><td><span class="type-badge ' + type + '">' + type + '</span></td><td><button class="del-btn" onclick="deleteEntry(\'' + escAttr(real) + '\')" title="Delete">×</button></td></tr>';
     }
     html += '</tbody></table>';
     container.innerHTML = html;
@@ -721,8 +791,7 @@ function addManualEntry() {
     const real = document.getElementById('addReal').value.trim();
     const fake = document.getElementById('addFake').value.trim();
     if (!real || !fake) return;
-    const type = detectType(real);
-    setMapping(real, fake, type);
+    setMapping(real, fake, detectType(real));
     document.getElementById('addReal').value = '';
     document.getElementById('addFake').value = '';
     saveAll();
@@ -735,8 +804,7 @@ function addManualEntry() {
 // ════════════════════════════════════════════
 function exportDict() {
     const data = {
-        project: currentProject,
-        version: 1,
+        project: currentProject, version: 1,
         exported: new Date().toISOString(),
         entries: Object.entries(getDict()).map(([real, fake]) => ({
             real, fake, type: getTypes()[real] || 'identity'
@@ -746,7 +814,7 @@ function exportDict() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `prompt-mask_${currentProject}_${new Date().toISOString().slice(0,10)}.json`;
+    a.download = 'prompt-mask_' + currentProject + '_' + new Date().toISOString().slice(0,10) + '.json';
     a.click();
     URL.revokeObjectURL(url);
 }
@@ -758,27 +826,17 @@ function importDict(event) {
     reader.onload = (e) => {
         try {
             const data = JSON.parse(e.target.result);
-            if (!data.entries || !Array.isArray(data.entries)) {
-                alert('Invalid file format.');
-                return;
-            }
-            const targetProject = data.project || currentProject;
-            if (!projects[targetProject]) initProject(targetProject);
+            if (!data.entries || !Array.isArray(data.entries)) { alert('Invalid file format.'); return; }
+            const target = data.project || currentProject;
+            if (!projects[target]) initProject(target);
             for (const entry of data.entries) {
-                projects[targetProject].dict[entry.real] = entry.fake;
-                projects[targetProject].rdict[entry.fake] = entry.real;
-                projects[targetProject].types[entry.real] = entry.type || 'identity';
+                projects[target].dict[entry.real] = entry.fake;
+                projects[target].rdict[entry.fake] = entry.real;
+                projects[target].types[entry.real] = entry.type || 'identity';
             }
-            if (targetProject !== currentProject) {
-                currentProject = targetProject;
-                renderProjectSelect();
-            }
-            saveAll();
-            renderDict();
-            updateStats(0, 0, 0);
-        } catch (err) {
-            alert('Error reading file: ' + err.message);
-        }
+            if (target !== currentProject) { currentProject = target; renderProjectSelect(); }
+            saveAll(); renderDict(); updateStats(0, 0, 0);
+        } catch (err) { alert('Error reading file: ' + err.message); }
     };
     reader.readAsText(file);
     event.target.value = '';
@@ -792,8 +850,7 @@ function renderProjectSelect() {
     select.innerHTML = '';
     for (const name of Object.keys(projects)) {
         const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name;
+        opt.value = name; opt.textContent = name;
         if (name === currentProject) opt.selected = true;
         select.appendChild(opt);
     }
@@ -801,9 +858,7 @@ function renderProjectSelect() {
 
 function switchProject() {
     currentProject = document.getElementById('projectSelect').value;
-    saveAll();
-    renderDict();
-    updateStats(0, 0, 0);
+    saveAll(); renderDict(); updateStats(0, 0, 0);
 }
 
 function showNewProjectModal() {
@@ -812,9 +867,7 @@ function showNewProjectModal() {
     document.getElementById('newProjectName').focus();
 }
 
-function closeModal() {
-    document.getElementById('newProjectModal').classList.remove('visible');
-}
+function closeModal() { document.getElementById('newProjectModal').classList.remove('visible'); }
 
 function createProject() {
     const name = document.getElementById('newProjectName').value.trim();
@@ -822,10 +875,7 @@ function createProject() {
     if (projects[name]) { alert('Project already exists.'); return; }
     initProject(name);
     currentProject = name;
-    saveAll();
-    renderProjectSelect();
-    renderDict();
-    updateStats(0, 0, 0);
+    saveAll(); renderProjectSelect(); renderDict(); updateStats(0, 0, 0);
     closeModal();
 }
 
@@ -834,10 +884,7 @@ function deleteCurrentProject() {
     if (!confirm('Delete project "' + currentProject + '" and all its entries?')) return;
     delete projects[currentProject];
     currentProject = 'default';
-    saveAll();
-    renderProjectSelect();
-    renderDict();
-    updateStats(0, 0, 0);
+    saveAll(); renderProjectSelect(); renderDict(); updateStats(0, 0, 0);
 }
 
 // ════════════════════════════════════════════
@@ -856,8 +903,6 @@ function loadAll() {
         const c = localStorage.getItem('promptmask_current');
         if (p) projects = JSON.parse(p);
         if (c && projects[c]) currentProject = c;
-
-        // Migrate from old format
         const oldDict = localStorage.getItem('promptmask_dict');
         const oldRdict = localStorage.getItem('promptmask_rdict');
         if (oldDict && !projects['default']?.dict) {
@@ -869,16 +914,10 @@ function loadAll() {
             saveAll();
         }
     } catch (e) { /* silent */ }
-
     if (!projects['default']) initProject('default');
-    renderProjectSelect();
-    renderDict();
-    updateStats(0, 0, 0);
+    renderProjectSelect(); renderDict(); updateStats(0, 0, 0);
 }
 
-// ════════════════════════════════════════════
-// INIT
-// ════════════════════════════════════════════
 loadAll();
 </script>
 </body>
