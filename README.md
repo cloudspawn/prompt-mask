@@ -6,6 +6,8 @@ prompt-mask sits between you and the AI — you mask sensitive data before sendi
 
 No server. No account. No tracking. Just open the page and go.
 
+![Demo](assets/demo.svg)
+
 ## How it works
 
 ```
