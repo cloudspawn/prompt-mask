@@ -13,7 +13,7 @@ Every day, millions of people paste client names, emails, financial data, and in
 prompt-mask sits between you and the AI:
 
 ```
-You type:    "Draft an email to ***{Jean Dupont} at ***{Nexus Tech} about $$${450k€}"
+You type:    "Draft an email to ***{Jean Dupont} at ***{Nexus Tech} about +++{450k€}"
 prompt-mask: "Draft an email to Marc Lefèvre at Alpha Corp about 382k€"
 AI responds: "Dear Marc Lefèvre from Alpha Corp..."
 prompt-mask: "Dear Jean Dupont from Nexus Tech..."
@@ -52,8 +52,8 @@ Three markers, that's all you need:
 | Marker | Meaning | Example | Result |
 |--------|---------|---------|--------|
 | `***{text}` | **Anonymize** — replace with realistic fake | `***{Jean Dupont}` | `Marc Lefèvre` |
-| `###{}` | **Block** — redact completely | `###{}` | `[REDACTED]` |
-| `$$${text}` | **Randomize** — same type, different value | `$$${450k€}` | `382k€` |
+| `---{text}` | **Block** — redact completely | `---{secret}` | `[REDACTED]` |
+| `+++{text}` | **Randomize** — same type, different value | `+++{450k€}` | `382k€` |
 
 The same real value always maps to the same fake value across all your prompts (consistent dictionary).
 

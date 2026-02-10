@@ -268,7 +268,7 @@
                 <span class="shortcut">Ctrl+3</span>
             </button>
         </div>
-        <textarea id="input" placeholder="Type or paste your prompt here...&#10;&#10;Mark sensitive data:&#10;  Select text → right-click → choose action&#10;  Or type: ***{name}  ###{secret}  $$${amount}&#10;  Or use toolbar buttons / Ctrl+1,2,3"></textarea>
+        <textarea id="input" placeholder="Type or paste your prompt here...&#10;&#10;Mark sensitive data:&#10;  Select text → right-click → choose action&#10;  Or type: ***{name}  ---{secret}  +++{amount}&#10;  Or use toolbar buttons / Ctrl+1,2,3"></textarea>
     </div>
 
     <!-- Output panel -->
@@ -366,19 +366,61 @@ function generateFake(value, type) {
         case 'email':    return FAKE_EMAILS[emailIdx++ % FAKE_EMAILS.length];
         case 'company':  return FAKE_COMPANIES[companyIdx++ % FAKE_COMPANIES.length];
         case 'project':  return FAKE_PROJECTS[projectIdx++ % FAKE_PROJECTS.length];
-        case 'amount':   return randomizeAmount(value);
+        case 'amount':   return randomizeValue(value);
         default:         return FAKE_NAMES[nameIdx++ % FAKE_NAMES.length];
     }
 }
 
-function randomizeAmount(value) {
-    const cleaned = value.replace(/[\s,]/g, '');
-    const match = cleaned.match(/([\d.]+)\s*([€$£¥kKmM%]*)/);
-    if (!match) return value;
-    const num = parseFloat(match[1]);
-    const suffix = match[2] || '';
-    const factor = 0.7 + Math.random() * 0.6;
-    return Math.round(num * factor) + suffix;
+function randomizeValue(value) {
+    const v = value.trim();
+
+    // Try as number/amount first
+    const amountMatch = v.match(/^([^\d]*)(\d[\d\s.,]*)(\s*[€$£¥kKmM%]*.*)$/);
+    if (amountMatch) {
+        const prefix = amountMatch[1];
+        const numStr = amountMatch[2].replace(/[\s,]/g, '');
+        const suffix = amountMatch[3];
+        const num = parseFloat(numStr);
+        if (!isNaN(num)) {
+            const factor = 0.7 + Math.random() * 0.6;
+            return prefix + Math.round(num * factor) + suffix;
+        }
+    }
+
+    // Try as date (dd/mm/yyyy, mm/dd/yyyy, yyyy-mm-dd)
+    const dateMatch = v.match(/^(\d{1,4})([\/-])(\d{1,2})\2(\d{1,4})$/);
+    if (dateMatch) {
+        const offset = Math.floor(Math.random() * 60) - 30;
+        const parts = [dateMatch[1], dateMatch[3], dateMatch[4]].map(Number);
+        const sep = dateMatch[2];
+        let d;
+        if (parts[2] > 31) { // dd/mm/yyyy or mm/dd/yyyy
+            d = new Date(parts[2], parts[1] - 1, parts[0]);
+        } else { // yyyy-mm-dd
+            d = new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+        if (!isNaN(d.getTime())) {
+            d.setDate(d.getDate() + offset);
+            const pad = n => String(n).padStart(2, '0');
+            if (parts[2] > 31) {
+                return pad(d.getDate()) + sep + pad(d.getMonth()+1) + sep + d.getFullYear();
+            } else {
+                return d.getFullYear() + sep + pad(d.getMonth()+1) + sep + pad(d.getDate());
+            }
+        }
+    }
+
+    // For any other text: shuffle characters to make it unrecognizable
+    // but keep length and general shape (upper/lower/digits/special)
+    const chars = v.split('');
+    for (let i = chars.length - 1; i > 0; i--) {
+        const c = chars[i];
+        if (/[a-z]/.test(c)) chars[i] = String.fromCharCode(97 + Math.floor(Math.random() * 26));
+        else if (/[A-Z]/.test(c)) chars[i] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+        else if (/[0-9]/.test(c)) chars[i] = String(Math.floor(Math.random() * 10));
+        // keep special chars, spaces, punctuation as-is
+    }
+    return chars.join('');
 }
 
 // ════════════════════════════════════════════
@@ -399,15 +441,15 @@ function seal() {
         return fake;
     });
 
-    output = output.replace(/###\{([^}]*)\}/g, (_, value) => {
+    output = output.replace(/---\{([^}]*)\}/g, (_, value) => {
         blockCount++;
         return '[REDACTED]';
     });
 
-    output = output.replace(/\$\$\$\{([^}]+)\}/g, (_, value) => {
+    output = output.replace(/\+\+\+\{([^}]+)\}/g, (_, value) => {
         randomCount++;
         if (dictionary[value]) return dictionary[value];
-        const fake = randomizeAmount(value);
+        const fake = randomizeValue(value);
         dictionary[value] = fake;
         reverseDictionary[fake] = value;
         return fake;
@@ -443,7 +485,7 @@ function wrapSelection(type) {
     hideContextMenu();
     if (!selected) return;
 
-    const markers = { anon: '***', block: '###', random: '$$$' };
+    const markers = { anon: '***', block: '---', random: '+++' };
     const wrapped = markers[type] + '{' + selected + '}';
 
     textarea.value = textarea.value.substring(0, start) + wrapped + textarea.value.substring(end);
