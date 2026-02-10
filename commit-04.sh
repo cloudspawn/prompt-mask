@@ -1,3 +1,10 @@
+#!/bin/bash
+# ============================================
+# COMMIT 4: Dictionary manager with projects, export/import
+# ============================================
+# Run from inside prompt-mask/
+
+cat > app/index.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -883,3 +890,30 @@ loadAll();
 </script>
 </body>
 </html>
+HTMLEOF
+
+# ============================================
+# Git commit
+# ============================================
+git add -A
+git commit -m "feat: dictionary manager with projects, export/import
+
+- Dictionary panel (toggle with 📖 button)
+  - View all mappings in a table (real → masked → type)
+  - Add entries manually
+  - Delete individual entries
+  - Clear all entries
+- Project/context system
+  - Switch between projects (separate dictionaries)
+  - Create / delete projects
+  - Default project always exists
+- Export dictionary as JSON file
+- Import dictionary from JSON file (auto-creates project)
+- Migration from old localStorage format
+- Type badges (identity, amount, date, text, blocked)
+- Improved type detection for +++{} randomize entries"
+
+echo ""
+echo "✅ Commit 4 done!"
+echo "Refresh app/index.html to test."
+echo ""
