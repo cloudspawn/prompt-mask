@@ -280,6 +280,70 @@
         #importFile { display: none; }
 
 
+
+        /* ── Audit panel ── */
+        .audit-panel {
+            border-top: 1px solid var(--border);
+            max-height: 0; overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .audit-panel.open { max-height: 600px; overflow-y: auto; }
+        .audit-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 40px; position: sticky; top: 0;
+            background: var(--bg); z-index: 1;
+        }
+        .audit-header .audit-title {
+            font-family: 'Anybody', sans-serif; font-weight: 600;
+            font-size: 11px; text-transform: uppercase;
+            letter-spacing: 1.5px; color: var(--text-muted);
+        }
+        .audit-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px; padding: 0 40px 16px;
+        }
+        .audit-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 16px;
+        }
+        .audit-card .audit-card-label {
+            font-size: 10px; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;
+        }
+        .audit-card .audit-card-value {
+            font-family: 'Anybody', sans-serif; font-weight: 800;
+            font-size: 28px; letter-spacing: -1px;
+        }
+        .audit-card .audit-card-sub {
+            font-size: 11px; color: var(--text-muted); margin-top: 4px;
+        }
+        .audit-card-value.green { color: var(--success); }
+        .audit-card-value.amber { color: var(--accent); }
+        .audit-card-value.red { color: var(--block); }
+        .audit-breakdown {
+            padding: 0 40px 16px;
+        }
+        .audit-breakdown table {
+            width: 100%; border-collapse: collapse;
+        }
+        .audit-breakdown th {
+            text-align: left; font-size: 10px; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 1px;
+            padding: 6px 12px; border-bottom: 1px solid var(--border);
+        }
+        .audit-breakdown td {
+            padding: 6px 12px; font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .audit-bar {
+            height: 6px; border-radius: 3px; background: var(--border);
+            overflow: hidden; margin-top: 4px;
+        }
+        .audit-bar-fill {
+            height: 100%; border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
         /* ── History panel ── */
         .history-panel {
             border-top: 1px solid var(--border);
@@ -379,6 +443,7 @@
             .mode-toggle { margin: 16px 20px 0; }
             header { flex-direction: column; align-items: flex-start; gap: 12px; }
             .history-header, .history-list { padding-left: 20px; padding-right: 20px; }
+            .audit-header, .audit-grid, .audit-breakdown { padding-left: 20px; padding-right: 20px; }
         }
     </style>
 </head>
@@ -466,6 +531,7 @@
     <div style="margin-left:auto">
         <button onclick="toggleDict()" id="dictToggleBtn">📖 Dictionary</button>
         <button onclick="toggleHistory()" id="historyToggleBtn" style="margin-left:4px">📋 History</button>
+        <button onclick="toggleAudit()" id="auditToggleBtn" style="margin-left:4px">📊 Audit</button>
     </div>
 </div>
 
@@ -488,6 +554,16 @@
     <div id="dictContent"></div>
 </div>
 
+
+
+<!-- Audit panel -->
+<div class="audit-panel" id="auditPanel">
+    <div class="audit-header">
+        <span class="audit-title">📊 Audit Overview</span>
+    </div>
+    <div class="audit-grid" id="auditGrid"></div>
+    <div class="audit-breakdown" id="auditBreakdown"></div>
+</div>
 
 <!-- History panel -->
 <div class="history-panel" id="historyPanel">
@@ -851,6 +927,7 @@ function toggleDict() {
     document.getElementById('dictPanel').classList.toggle('open');
     if (document.getElementById('dictPanel').classList.contains('open')) {
         document.getElementById('historyPanel').classList.remove('open');
+        document.getElementById('auditPanel').classList.remove('open');
     }
     renderDict();
 }
@@ -997,6 +1074,102 @@ function deleteCurrentProject() {
 }
 
 
+
+// ════════════════════════════════════════════
+// MINI AUDIT
+// ════════════════════════════════════════════
+function toggleAudit() {
+    const panel = document.getElementById('auditPanel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+        document.getElementById('dictPanel').classList.remove('open');
+        document.getElementById('historyPanel').classList.remove('open');
+        renderAudit();
+    }
+}
+
+function renderAudit() {
+    const grid = document.getElementById('auditGrid');
+    const breakdown = document.getElementById('auditBreakdown');
+
+    // Compute stats from history
+    const totalPrompts = history.length;
+    let totalAnon = 0, totalBlock = 0, totalRandom = 0;
+    const projectStats = {};
+    const last30 = [];
+    const now = Date.now();
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+
+    for (const entry of history) {
+        totalAnon += entry.stats.anon;
+        totalBlock += entry.stats.block;
+        totalRandom += entry.stats.random;
+
+        if (!projectStats[entry.project]) {
+            projectStats[entry.project] = { prompts: 0, anon: 0, block: 0, random: 0 };
+        }
+        projectStats[entry.project].prompts++;
+        projectStats[entry.project].anon += entry.stats.anon;
+        projectStats[entry.project].block += entry.stats.block;
+        projectStats[entry.project].random += entry.stats.random;
+
+        if (now - new Date(entry.timestamp).getTime() < thirtyDays) {
+            last30.push(entry);
+        }
+    }
+
+    const totalMarkers = totalAnon + totalBlock + totalRandom;
+    const dictSize = Object.keys(getDict()).length;
+
+    // Privacy score: % of prompts that have at least one marker
+    const promptsWithMarkers = history.filter(h => (h.stats.anon + h.stats.block + h.stats.random) > 0).length;
+    const privacyScore = totalPrompts > 0 ? Math.round((promptsWithMarkers / totalPrompts) * 100) : 0;
+    const scoreClass = privacyScore >= 80 ? 'green' : privacyScore >= 50 ? 'amber' : 'red';
+
+    // Render cards
+    grid.innerHTML =
+        '<div class="audit-card">' +
+            '<div class="audit-card-label">Total prompts sealed</div>' +
+            '<div class="audit-card-value">' + totalPrompts + '</div>' +
+            '<div class="audit-card-sub">' + last30.length + ' in the last 30 days</div>' +
+        '</div>' +
+        '<div class="audit-card">' +
+            '<div class="audit-card-label">Data points protected</div>' +
+            '<div class="audit-card-value">' + totalMarkers + '</div>' +
+            '<div class="audit-card-sub">' +
+                '<span style="color:var(--anon)">● ' + totalAnon + ' anonymized</span> &nbsp;' +
+                '<span style="color:var(--block)">● ' + totalBlock + ' blocked</span> &nbsp;' +
+                '<span style="color:var(--random)">● ' + totalRandom + ' randomized</span>' +
+            '</div>' +
+        '</div>' +
+        '<div class="audit-card">' +
+            '<div class="audit-card-label">Privacy score</div>' +
+            '<div class="audit-card-value ' + scoreClass + '">' + privacyScore + '%</div>' +
+            '<div class="audit-bar"><div class="audit-bar-fill" style="width:' + privacyScore + '%;background:var(--' + scoreClass + ')"></div></div>' +
+            '<div class="audit-card-sub">% of prompts with at least one marker</div>' +
+        '</div>' +
+        '<div class="audit-card">' +
+            '<div class="audit-card-label">Dictionary size</div>' +
+            '<div class="audit-card-value">' + dictSize + '</div>' +
+            '<div class="audit-card-sub">Active project: ' + escHtml(currentProject) + '</div>' +
+        '</div>';
+
+    // Render project breakdown
+    const projectEntries = Object.entries(projectStats);
+    if (projectEntries.length === 0) {
+        breakdown.innerHTML = '';
+        return;
+    }
+
+    let html = '<table><thead><tr><th>Project</th><th>Prompts</th><th>Anonymized</th><th>Blocked</th><th>Randomized</th><th>Total</th></tr></thead><tbody>';
+    for (const [name, stats] of projectEntries.sort((a,b) => b[1].prompts - a[1].prompts)) {
+        const total = stats.anon + stats.block + stats.random;
+        html += '<tr><td>' + escHtml(name) + '</td><td>' + stats.prompts + '</td><td>' + stats.anon + '</td><td>' + stats.block + '</td><td>' + stats.random + '</td><td>' + total + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    breakdown.innerHTML = html;
+}
+
 // ════════════════════════════════════════════
 // PROMPT HISTORY
 // ════════════════════════════════════════════
@@ -1020,9 +1193,9 @@ function savePromptToHistory(original, sealed, anonCount, blockCount, randomCoun
 function toggleHistory() {
     const panel = document.getElementById('historyPanel');
     panel.classList.toggle('open');
-    // Close dict if open
     if (panel.classList.contains('open')) {
         document.getElementById('dictPanel').classList.remove('open');
+        document.getElementById('auditPanel').classList.remove('open');
     }
     renderHistory();
 }

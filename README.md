@@ -2,73 +2,71 @@
 
 **Anonymize your prompts before sending them to AI. 100% local. Zero data leaves your device.**
 
-prompt-mask is a lightweight tool that lets you mask sensitive data (names, emails, amounts, secrets) in your prompts before pasting them into ChatGPT, Claude, or any AI tool — and unmask the AI's response afterward.
+prompt-mask sits between you and the AI — you mask sensitive data before sending, and unmask the response when it comes back. Names, emails, amounts, secrets: the AI never sees the real thing.
 
-No server. No account. No tracking. Just open the HTML file and go.
+No server. No account. No tracking. Just open the page and go.
 
-## Why?
-
-Every day, millions of people paste client names, emails, financial data, and internal information into AI chatbots without thinking twice. That data hits external servers and you lose control over it.
-
-prompt-mask sits between you and the AI:
+## How it works
 
 ```
 You type:    "Draft an email to ***{Jean Dupont} at ***{Nexus Tech} about +++{450k€}"
-prompt-mask: "Draft an email to Marc Lefèvre at Alpha Corp about 382k€"
-AI responds: "Dear Marc Lefèvre from Alpha Corp..."
+prompt-mask: "Draft an email to Alex Morgan at Vertex Labs about 518k€"
+AI responds: "Dear Alex Morgan from Vertex Labs..."
 prompt-mask: "Dear Jean Dupont from Nexus Tech..."
 ```
 
-You stay in control. The AI never sees the real data.
-
 ## Quick Start
 
-### Web App (no install needed)
+### Web App (recommended — no install)
 
-1. Open `app/index.html` in your browser — or visit [cloudspawn.github.io/prompt-mask](https://cloudspawn.github.io/prompt-mask)
-2. Paste your text
-3. Mark sensitive data with `***{...}`
-4. Copy the masked version to your AI tool
-5. Paste the AI response back to unmask
+**Use it now:** [cloudspawn.github.io/prompt-mask](https://cloudspawn.github.io/prompt-mask)
 
-### CLI (for developers)
+Or download `app/index.html` and open it locally. Works offline, works everywhere.
 
-```bash
-pip install prompt-mask
-```
+### How to use
 
-```bash
-# Mask a prompt
-prompt-mask seal "Send the invoice to ***{Jean Dupont} at ***{Nexus Tech}"
+1. **SEAL mode** — Write your prompt, mark sensitive data, hit SEAL, copy the masked output to your AI tool
+2. **UNSEAL mode** — Paste the AI response, hit UNSEAL, get the real data back
 
-# Unmask AI response
-prompt-mask unseal "I've prepared the invoice for Marc Lefèvre at Alpha Corp"
-```
+Three ways to mark sensitive data:
 
-## Mini-Language
+| Method | How |
+|--------|-----|
+| **Type markers** | `***{Jean Dupont}` directly in the text |
+| **Right-click** | Select text → right-click → choose action |
+| **Keyboard** | Select text → Ctrl+1, Ctrl+2, or Ctrl+3 |
 
-Three markers, that's all you need:
+### Mini-Language
 
-| Marker | Meaning | Example | Result |
-|--------|---------|---------|--------|
-| `***{text}` | **Anonymize** — replace with realistic fake | `***{Jean Dupont}` | `Marc Lefèvre` |
-| `---{text}` | **Block** — redact completely | `---{secret}` | `[REDACTED]` |
-| `+++{text}` | **Randomize** — same type, different value | `+++{450k€}` | `382k€` |
+| Marker | Action | Reversible? | Example |
+|--------|--------|-------------|---------|
+| `***{text}` | **Anonymize** — realistic fake replacement | ✅ Yes | `***{Jean Dupont}` → `Alex Morgan` |
+| `+++{text}` | **Randomize** — same type, different value | ✅ Yes | `+++{450k€}` → `518k€` |
+| `---{text}` | **Block** — permanently redact | ❌ No | `---{password}` → `[REDACTED:1]` |
 
-The same real value always maps to the same fake value across all your prompts (consistent dictionary).
+Use `***` and `+++` when you need the AI to work with realistic data and want to restore it later. Use `---` for secrets that should never be stored anywhere.
+
+## Features
+
+- **Seal / Unseal** — mask before sending, unmask after receiving
+- **Auto-dictionary** — consistent mappings that build up over time
+- **Projects** — separate dictionaries per client/project/context
+- **Prompt history** — automatic log of everything you've sealed, searchable, exportable
+- **Mini audit** — stats on what you've protected
+- **Export / Import** — backup and share your dictionaries and history
+- **Context menu & shortcuts** — right-click or Ctrl+1/2/3 for fast marking
 
 ## 🔒 Privacy by Design
 
 This is NOT a web app that sends your data somewhere. It's a single HTML file that runs entirely in your browser.
 
-- ❌ No server
-- ❌ No database
-- ❌ No user account
-- ❌ No cookies or tracking
-- ❌ No network requests — ever
-- ✅ Works offline (download the HTML file)
-- ✅ Your data stays in your browser (localStorage)
-- ✅ Code is open source and auditable
+- ❌ No server — nothing is hosted, processed, or stored remotely
+- ❌ No database — your data lives in your browser's localStorage only
+- ❌ No account — no signup, no login, no email
+- ❌ No tracking — no analytics, no cookies, no telemetry
+- ❌ No network requests — ever, under any circumstance
+- ✅ Works fully offline — download the file, disconnect your WiFi
+- ✅ Open source — read every line of code yourself
 
 ### How to verify
 
@@ -77,40 +75,49 @@ This is NOT a web app that sends your data somewhere. It's a single HTML file th
 3. Use the app
 4. See for yourself: zero network requests
 
-## Features
+## CLI (coming soon)
 
-- **Seal / Unseal** — mask before sending, unmask after receiving
-- **Auto-dictionary** — builds up over time, remembers your mappings
-- **Prompt history** — local log of everything you've sent to AI tools
-- **Mini audit** — stats on what you've protected (and what you haven't)
-- **Privacy score** — see how well you're protecting your data
-- **Post-send check** — optional safety net that catches unmarked sensitive data
+A Python CLI for developers who want to integrate prompt-mask into their workflow — piping, scripting, pre-commit hooks, and more.
+
+```bash
+pip install prompt-mask
+
+# Seal a prompt
+prompt-mask seal "Send the invoice to ***{Jean Dupont}"
+
+# Seal a file
+prompt-mask seal < spec.md > spec-safe.md
+
+# Unseal AI response
+prompt-mask unseal < ai-response.md > final.md
+```
+
+The CLI will share the same dictionary format as the web app (JSON), so you can export from one and import in the other.
 
 ## Roadmap
 
-- [x] Project setup
-- [ ] Web app — core seal/unseal with mini-language
-- [ ] Web app — persistent dictionary
-- [ ] Web app — prompt history
-- [ ] Web app — audit & stats
-- [ ] CLI — Python package with same features
+- [x] Web app — core seal/unseal with mini-language
+- [x] Right-click context menu & keyboard shortcuts
+- [x] Consistent auto-dictionary (localStorage)
+- [x] Project/context system
+- [x] Dictionary manager (view, add, delete, export, import)
+- [x] Seal/unseal mode with clear UX guidance
+- [x] Prompt history (auto-save, search, reuse, export)
+- [x] Numbered redaction (non-reversible, nothing stored)
+- [x] Mini audit & stats
+- [x] GitHub Pages deployment
+- [ ] CLI — Python package for terminal workflows
 - [ ] Browser extension (future)
 
 ## Development
 
 ```bash
-# Clone
 git clone https://github.com/cloudspawn/prompt-mask.git
 cd prompt-mask
-
-# Setup with uv
 uv sync
 
-# Run CLI (once implemented)
-uv run prompt-mask seal "your prompt here"
-
-# Run tests
-uv run pytest
+# Serve the web app locally
+cd app && python3 -m http.server 8080
 ```
 
 ## Contributing
