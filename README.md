@@ -37,6 +37,8 @@ Three ways to mark sensitive data:
 | **Type markers** | `***{Jean Dupont}` directly in the text |
 | **Right-click** | Select text → right-click → choose action |
 | **Keyboard** | Select text → Ctrl+1, Ctrl+2, or Ctrl+3 |
+| **Propagate** | After marking, propagate to all identical occurrences |
+| **Right-click marked text** | Remove marker or change type |
 
 ### Mini-Language
 

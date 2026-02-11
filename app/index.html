@@ -432,6 +432,48 @@
             color: var(--text-muted); font-size: 12px; font-style: italic;
         }
 
+
+        /* ── Propagate toast ── */
+        .toast {
+            display: none; position: fixed; bottom: 80px; left: 50%;
+            transform: translateX(-50%); background: var(--surface);
+            border: 1px solid var(--accent); border-radius: var(--radius);
+            padding: 10px 16px; z-index: 1100;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+            font-size: 12px; color: var(--text);
+            display: none; align-items: center; gap: 12px;
+            animation: toastIn 0.2s ease-out;
+        }
+        .toast.visible { display: flex; }
+        @keyframes toastIn {
+            from { opacity:0; transform:translateX(-50%) translateY(10px); }
+            to { opacity:1; transform:translateX(-50%) translateY(0); }
+        }
+        .toast button { font-size: 11px; padding: 4px 12px; }
+        .toast .toast-text { color: var(--text-muted); }
+        .toast .toast-count { color: var(--accent); font-weight: 500; }
+
+        /* ── Marker context menu (for already-marked text) ── */
+        .marker-ctx-menu {
+            display: none; position: fixed; background: var(--surface);
+            border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 4px 0; min-width: 200px; z-index: 1000;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+        }
+        .marker-ctx-menu.visible {
+            display: block; animation: ctxIn 0.12s ease-out;
+        }
+        .marker-ctx-menu button {
+            display: flex; align-items: center; gap: 8px;
+            width: 100%; border: none; border-radius: 0;
+            padding: 8px 14px; font-size: 12px;
+            background: transparent; text-align: left;
+        }
+        .marker-ctx-menu button:hover { background: var(--surface-hover); }
+        .marker-ctx-menu .sep {
+            height: 1px; background: var(--border); margin: 4px 0;
+        }
+
         /* ── Responsive ── */
         @media (max-width: 768px) {
             .workspace { grid-template-columns: 1fr; }
@@ -588,6 +630,34 @@
     </button>
     <button onclick="wrapSelection('random')">
         <span class="marker-dot random"></span> Randomize <span class="ctx-shortcut">Ctrl+3</span>
+    </button>
+</div>
+
+
+<!-- Propagate toast -->
+<div class="toast" id="propagateToast">
+    <span class="toast-text">Found <span class="toast-count" id="propagateCount">0</span> other occurrences.</span>
+    <button class="primary" onclick="propagateMarker()">Propagate all</button>
+    <button onclick="hideToast()">Dismiss</button>
+</div>
+
+<!-- Marker context menu (right-click on already-marked text) -->
+<div class="marker-ctx-menu" id="markerCtxMenu">
+    <button onclick="removeMarkerAtCursor()">
+        ✕ Remove marker
+    </button>
+    <button id="propagateFromCtx" onclick="propagateFromMarkerCtx()" style="display:none">
+        ⟳ Propagate (<span id="propagateCtxCount">0</span> others)
+    </button>
+    <div class="sep"></div>
+    <button onclick="changeMarkerType('anon')">
+        <span class="marker-dot anon"></span> Change to Anonymize
+    </button>
+    <button onclick="changeMarkerType('block')">
+        <span class="marker-dot block"></span> Change to Block
+    </button>
+    <button onclick="changeMarkerType('random')">
+        <span class="marker-dot random"></span> Change to Randomize
     </button>
 </div>
 
@@ -846,12 +916,16 @@ function unseal() {
 // ════════════════════════════════════════════
 // WRAP SELECTION
 // ════════════════════════════════════════════
+let lastWrappedText = '';
+let lastWrappedType = '';
+
 function wrapSelection(type) {
     const textarea = document.getElementById('input');
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selected = textarea.value.substring(start, end);
     hideContextMenu();
+    hideMarkerCtxMenu();
     if (!selected) return;
     const markers = { anon: '***', block: '---', random: '+++' };
     const wrapped = markers[type] + '{' + selected + '}';
@@ -860,26 +934,190 @@ function wrapSelection(type) {
     textarea.selectionStart = newPos;
     textarea.selectionEnd = newPos;
     textarea.focus();
+
+    // Check for other occurrences to propagate
+    lastWrappedText = selected;
+    lastWrappedType = type;
+    const count = countUnwrappedOccurrences(textarea.value, selected);
+    if (count > 0) {
+        document.getElementById('propagateCount').textContent = count;
+        showToast();
+    }
+}
+
+function countUnwrappedOccurrences(text, word) {
+    if (!word) return 0;
+    let count = 0;
+    let pos = 0;
+    const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Match word NOT already inside markers: not preceded by ***{ or ---{ or +++{
+    const regex = new RegExp('(?<!\\*\\*\\*\\{)(?<!---\\{)(?<!\\+\\+\\+\\{)' + escaped + '(?!\\})', 'g');
+    const matches = text.match(regex);
+    return matches ? matches.length : 0;
+}
+
+function propagateMarker() {
+    if (!lastWrappedText || !lastWrappedType) return;
+    const textarea = document.getElementById('input');
+    const markers = { anon: '***', block: '---', random: '+++' };
+    const marker = markers[lastWrappedType];
+    const text = lastWrappedText;
+    const cursorPos = textarea.selectionStart;
+
+    // Replace all unwrapped occurrences
+    let result = '';
+    let i = 0;
+    const val = textarea.value;
+    while (i < val.length) {
+        // Check if we're at a marker already
+        let isMarked = false;
+        for (const m of ['***', '---', '+++']) {
+            if (val.substring(i, i + m.length + 1) === m + '{') {
+                // Skip to closing }
+                const closeIdx = val.indexOf('}', i + m.length + 1);
+                if (closeIdx !== -1) {
+                    result += val.substring(i, closeIdx + 1);
+                    i = closeIdx + 1;
+                    isMarked = true;
+                    break;
+                }
+            }
+        }
+        if (isMarked) continue;
+
+        // Check if text matches at this position
+        if (val.substring(i, i + text.length) === text) {
+            result += marker + '{' + text + '}';
+            i += text.length;
+        } else {
+            result += val[i];
+            i++;
+        }
+    }
+
+    textarea.value = result;
+    hideToast();
+    lastWrappedText = '';
+    lastWrappedType = '';
+}
+
+function showToast() {
+    document.getElementById('propagateToast').classList.add('visible');
+    // Auto-hide after 6s
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(hideToast, 6000);
+}
+
+function hideToast() {
+    document.getElementById('propagateToast').classList.remove('visible');
+    clearTimeout(window._toastTimer);
 }
 
 // ════════════════════════════════════════════
 // CONTEXT MENU
 // ════════════════════════════════════════════
 const ctxMenu = document.getElementById('ctxMenu');
+const markerCtxMenu = document.getElementById('markerCtxMenu');
+let markerCtxStart = -1;
+let markerCtxEnd = -1;
+
 document.getElementById('input').addEventListener('contextmenu', (e) => {
     if (currentMode !== 'seal') return;
     const textarea = document.getElementById('input');
-    const selected = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd);
+    const cursor = textarea.selectionStart;
+    const val = textarea.value;
+
+    // Check if cursor is inside a marker
+    const markerInfo = findMarkerAtPosition(val, cursor);
+    if (markerInfo) {
+        e.preventDefault();
+        hideContextMenu();
+        markerCtxStart = markerInfo.start;
+        markerCtxEnd = markerInfo.end;
+        markerCtxMenu.style.left = e.clientX + 'px';
+        markerCtxMenu.style.top = e.clientY + 'px';
+        // Check if propagation is possible
+        const propCount = countUnwrappedOccurrences(val, markerInfo.inner);
+        const propBtn = document.getElementById('propagateFromCtx');
+        if (propCount > 0) {
+            document.getElementById('propagateCtxCount').textContent = propCount;
+            propBtn.style.display = 'flex';
+        } else {
+            propBtn.style.display = 'none';
+        }
+        markerCtxMenu.classList.add('visible');
+        return;
+    }
+
+    const selected = val.substring(textarea.selectionStart, textarea.selectionEnd);
     if (selected) {
         e.preventDefault();
+        hideMarkerCtxMenu();
         ctxMenu.style.left = e.clientX + 'px';
         ctxMenu.style.top = e.clientY + 'px';
         ctxMenu.classList.add('visible');
     }
 });
-document.addEventListener('click', hideContextMenu);
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideContextMenu(); });
+
+document.addEventListener('click', () => { hideContextMenu(); hideMarkerCtxMenu(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hideContextMenu(); hideMarkerCtxMenu(); } });
 function hideContextMenu() { ctxMenu.classList.remove('visible'); }
+function hideMarkerCtxMenu() { markerCtxMenu.classList.remove('visible'); }
+
+function findMarkerAtPosition(text, pos) {
+    const markers = ['***', '---', '+++'];
+    for (const m of markers) {
+        let searchStart = 0;
+        while (true) {
+            const openIdx = text.indexOf(m + '{', searchStart);
+            if (openIdx === -1) break;
+            const closeIdx = text.indexOf('}', openIdx + m.length + 1);
+            if (closeIdx === -1) break;
+            if (pos >= openIdx && pos <= closeIdx) {
+                const inner = text.substring(openIdx + m.length + 1, closeIdx);
+                return { start: openIdx, end: closeIdx + 1, marker: m, inner: inner };
+            }
+            searchStart = closeIdx + 1;
+        }
+    }
+    return null;
+}
+
+function removeMarkerAtCursor() {
+    if (markerCtxStart === -1) return;
+    const textarea = document.getElementById('input');
+    const val = textarea.value;
+    const markerInfo = findMarkerAtPosition(val, markerCtxStart);
+    if (!markerInfo) return;
+    textarea.value = val.substring(0, markerInfo.start) + markerInfo.inner + val.substring(markerInfo.end);
+    hideMarkerCtxMenu();
+    textarea.focus();
+}
+
+function propagateFromMarkerCtx() {
+    if (markerCtxStart === -1) return;
+    const textarea = document.getElementById('input');
+    const val = textarea.value;
+    const markerInfo = findMarkerAtPosition(val, markerCtxStart);
+    if (!markerInfo) return;
+    lastWrappedText = markerInfo.inner;
+    lastWrappedType = markerInfo.marker === '***' ? 'anon' : markerInfo.marker === '---' ? 'block' : 'random';
+    hideMarkerCtxMenu();
+    propagateMarker();
+}
+
+function changeMarkerType(type) {
+    if (markerCtxStart === -1) return;
+    const textarea = document.getElementById('input');
+    const val = textarea.value;
+    const markerInfo = findMarkerAtPosition(val, markerCtxStart);
+    if (!markerInfo) return;
+    const markers = { anon: '***', block: '---', random: '+++' };
+    const newMarked = markers[type] + '{' + markerInfo.inner + '}';
+    textarea.value = val.substring(0, markerInfo.start) + newMarked + val.substring(markerInfo.end);
+    hideMarkerCtxMenu();
+    textarea.focus();
+}
 
 // ════════════════════════════════════════════
 // KEYBOARD SHORTCUTS
