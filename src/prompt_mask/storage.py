@@ -77,3 +77,50 @@ def remove_mapping(real, project=None):
         data["rdict"].pop(fake, None)
     save_dict(data, project)
     return data
+
+
+def list_projects():
+    """List all projects."""
+    projects_dir = DEFAULT_DIR / "projects"
+    if not projects_dir.exists():
+        return []
+    return sorted([d.name for d in projects_dir.iterdir() if d.is_dir()])
+
+
+def delete_project(name):
+    """Delete a project and its dictionary."""
+    import shutil
+    if name == DEFAULT_PROJECT:
+        raise ValueError("Cannot delete the default project.")
+    d = DEFAULT_DIR / "projects" / name
+    if d.exists():
+        shutil.rmtree(d)
+    if get_current_project() == name:
+        set_current_project(DEFAULT_PROJECT)
+
+
+def export_dict(project=None):
+    """Export dict in web-compatible JSON format."""
+    import datetime
+    data = load_dict(project)
+    proj = project or get_current_project()
+    return {
+        "project": proj,
+        "version": 1,
+        "exported": datetime.datetime.now().isoformat(),
+        "entries": [
+            {"real": real, "fake": fake, "type": data["types"].get(real, "identity")}
+            for real, fake in data["dict"].items()
+        ],
+    }
+
+
+def import_dict(entries, project=None):
+    """Import entries (web-compatible format) into a project."""
+    data = load_dict(project)
+    for entry in entries:
+        data["dict"][entry["real"]] = entry["fake"]
+        data["rdict"][entry["fake"]] = entry["real"]
+        data["types"][entry["real"]] = entry.get("type", "identity")
+    save_dict(data, project)
+    return len(entries)
