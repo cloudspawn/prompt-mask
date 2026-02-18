@@ -25,3 +25,4 @@ Thumbs.db
 
 # Project specific
 *.encsrc/prompt_mask.egg-info/
+backup.json
