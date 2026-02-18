@@ -1,5 +1,7 @@
 # 🎭 prompt-mask
 
+<a href="https://buymeacoffee.com/promptmask" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="40"></a>
+
 **Anonymize your prompts before sending them to AI. 100% local. Zero data leaves your device.**
 
 prompt-mask sits between you and the AI — you mask sensitive data before sending, and unmask the response when it comes back. Names, emails, amounts, secrets: the AI never sees the real thing.
@@ -214,6 +216,12 @@ uv sync
 # Serve the web app locally
 cd app && python3 -m http.server 8080
 ```
+
+## Support
+
+prompt-mask is free, open source, and always will be. If it saves you time or protects your data, consider buying me a coffee:
+
+<a href="https://buymeacoffee.com/promptmask" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="50"></a>
 
 ## Contributing
 
