@@ -24,4 +24,4 @@ wheels/
 Thumbs.db
 
 # Project specific
-*.enc
+*.encsrc/prompt_mask.egg-info/
