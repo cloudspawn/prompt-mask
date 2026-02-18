@@ -5,12 +5,24 @@ import json
 import argparse
 from pathlib import Path
 from . import __version__
-from . import engine, storage
+from . import engine, storage, detector
+
+
+# ── Colors for terminal output ──
+class C:
+    AMBER = "\033[33m"
+    RED = "\033[31m"
+    PURPLE = "\033[35m"
+    GREEN = "\033[32m"
+    CYAN = "\033[36m"
+    DIM = "\033[2m"
+    BOLD = "\033[1m"
+    RESET = "\033[0m"
 
 
 def read_input(source):
     """Read from file path, string argument, or stdin."""
-    if source and Path(source).is_file():
+    if source and len(source) < 260 and Path(source).is_file():
         return Path(source).read_text(encoding="utf-8")
     if source:
         return source
@@ -29,7 +41,9 @@ def write_output(text, output_path=None):
         print(text)
 
 
-# ── Seal / Unseal ──
+# ════════════════════════════════════════
+# Seal / Unseal
+# ════════════════════════════════════════
 
 def cmd_seal(args):
     text = read_input(args.input)
@@ -51,7 +65,167 @@ def cmd_unseal(args):
     print("Unsealed.", file=sys.stderr)
 
 
-# ── Project commands ──
+# ════════════════════════════════════════
+# Auto
+# ════════════════════════════════════════
+
+def cmd_auto(args):
+    text = read_input(args.input)
+    data = storage.load_dict(args.project)
+    d = data["dict"]
+
+    if not d:
+        print("Dictionary is empty. Use 'scan' or 'dict add' first.", file=sys.stderr)
+        sys.exit(1)
+
+    # Show what will be replaced
+    found = detector.find_known_in_text(text, d)
+    if not found:
+        print("No known dictionary entries found in text.", file=sys.stderr)
+        write_output(text, args.output)
+        return
+
+    if not args.yes:
+        print(f"\n{C.BOLD}Known entries found:{C.RESET}\n", file=sys.stderr)
+        for real, fake, count in found:
+            t = data["types"].get(real, "?")
+            print(
+                f"  {C.AMBER}{real}{C.RESET} → {C.GREEN}{fake}{C.RESET}"
+                f"  {C.DIM}({count}x, {t}){C.RESET}",
+                file=sys.stderr,
+            )
+        print(file=sys.stderr)
+        confirm = input("Apply all replacements? [y/N] ")
+        if confirm.lower() != "y":
+            print("Cancelled.")
+            return
+
+    result, count = engine.auto_seal(text, project=args.project)
+    write_output(result, args.output)
+    print(f"Auto-sealed: {count} replacements from dictionary.", file=sys.stderr)
+
+
+# ════════════════════════════════════════
+# Scan
+# ════════════════════════════════════════
+
+def cmd_scan(args):
+    text = read_input(args.input)
+    project = args.project
+    data = storage.load_dict(project)
+    d = data["dict"]
+
+    print(f"\n{C.BOLD}Scanning...{C.RESET}\n", file=sys.stderr)
+
+    # 1. Check known dictionary entries first
+    known = detector.find_known_in_text(text, d)
+    if known:
+        print(f"  {C.GREEN}{C.BOLD}Known from dictionary:{C.RESET}", file=sys.stderr)
+        for real, fake, count in known:
+            t = data["types"].get(real, "?")
+            print(
+                f"    {C.AMBER}{real}{C.RESET} → {C.GREEN}{fake}{C.RESET}"
+                f"  {C.DIM}({count}x, {t}){C.RESET} ✓",
+                file=sys.stderr,
+            )
+        print(file=sys.stderr)
+
+    # 2. Detect new sensitive data
+    findings = detector.detect_all(text)
+
+    # Remove already-known entries from findings
+    for category, items in list(findings.items()):
+        findings[category] = [(v, c) for v, c in items if v not in d]
+        if not findings[category]:
+            del findings[category]
+
+    if not findings and not known:
+        print("  Nothing detected.", file=sys.stderr)
+        return
+
+    # 3. Interactive: ask user what to do with each finding
+    actions = {}  # value → (action, type)
+    type_labels = {
+        "name": f"{C.AMBER}Names",
+        "email": f"{C.RED}Emails",
+        "ip": f"{C.RED}IPs",
+        "phone": f"{C.RED}Phone numbers",
+        "date": f"{C.PURPLE}Dates",
+        "amount": f"{C.PURPLE}Amounts",
+        "url": f"{C.CYAN}URLs",
+        "token": f"{C.RED}API keys / tokens",
+    }
+
+    for category, items in findings.items():
+        label = type_labels.get(category, category)
+        print(f"  {C.BOLD}{label}:{C.RESET}", file=sys.stderr)
+        for value, count in items:
+            prompt_str = (
+                f"    {C.AMBER}{value}{C.RESET}"
+                f"  {C.DIM}({count}x){C.RESET}"
+                f"  →  [a]nonymize [b]lock [r]andomize [s]kip ? "
+            )
+            while True:
+                choice = input(prompt_str).strip().lower()
+                if choice in ("a", "b", "r", "s", ""):
+                    break
+                print("    Invalid choice. Use a/b/r/s.", file=sys.stderr)
+
+            if choice == "s" or choice == "":
+                continue
+            actions[value] = (choice, category)
+        print(file=sys.stderr)
+
+    if not actions and not known:
+        print("No actions selected.", file=sys.stderr)
+        return
+
+    # 4. Apply
+    total_actions = len(actions) + len(known)
+    if total_actions == 0:
+        return
+
+    confirm = input(f"Apply {total_actions} changes? [y/N] ")
+    if confirm.lower() != "y":
+        print("Cancelled.")
+        return
+
+    result = text
+
+    # Apply known dictionary entries first
+    for real, fake, count in known:
+        result = result.replace(real, fake)
+
+    # Apply new actions
+    sealed_count = 0
+    block_counter = 0
+    block_counter = 0
+    for value, (action, category) in actions.items():
+        if action == "a":
+            t = engine.detect_type(value) if category == "name" else category
+            fake = engine.generate_fake(value, t)
+            storage.add_mapping(value, fake, t, project)
+            result = result.replace(value, fake)
+            sealed_count += result.count(fake) if result.count(fake) > 0 else 1
+        elif action == "b":
+            while value in result:
+                block_counter += 1
+                result = result.replace(value, f"[REDACTED:{block_counter}]", 1)
+                sealed_count += 1
+        elif action == "r":
+            fake = engine.randomize_value(value)
+            t = category if category in ("date", "amount") else "text"
+            storage.add_mapping(value, fake, t, project)
+            result = result.replace(value, fake)
+            sealed_count += 1
+
+    write_output(result, args.output)
+    print(f"\nSealed: {sealed_count} new + {len(known)} from dictionary.", file=sys.stderr)
+
+
+# ════════════════════════════════════════
+# Project commands
+# ════════════════════════════════════════
 
 def cmd_project(args):
     action = args.action
@@ -73,7 +247,6 @@ def cmd_project(args):
             print("Error: provide a project name.", file=sys.stderr)
             sys.exit(1)
         storage.set_current_project(args.name)
-        # Ensure project dir exists
         storage.get_project_dir(args.name)
         print(f"Switched to project: {args.name}")
 
@@ -100,7 +273,9 @@ def cmd_project(args):
         print("Usage: prompt-mask project [list|use|create|delete] [name]")
 
 
-# ── Dict commands ──
+# ════════════════════════════════════════
+# Dict commands
+# ════════════════════════════════════════
 
 def cmd_dict(args):
     action = args.action
@@ -113,12 +288,10 @@ def cmd_dict(args):
         if not entries:
             print("Dictionary is empty.")
             return
-        # Column widths
         max_real = max(len(r) for r in entries)
         max_fake = max(len(f) for f in entries.values())
         max_real = max(max_real, 4)
         max_fake = max(max_fake, 6)
-        # Header
         print(f"{'REAL':<{max_real}}  {'MASKED':<{max_fake}}  TYPE")
         print(f"{'─' * max_real}  {'─' * max_fake}  {'─' * 10}")
         for real, fake in entries.items():
@@ -177,6 +350,10 @@ def cmd_dict(args):
         print("Usage: prompt-mask dict [list|add|remove|export|import|clear]")
 
 
+# ════════════════════════════════════════
+# Main
+# ════════════════════════════════════════
+
 def main():
     parser = argparse.ArgumentParser(
         prog="prompt-mask",
@@ -198,6 +375,19 @@ def main():
     p_unseal.add_argument("input", nargs="?", default=None, help="Text or file path (or pipe stdin)")
     p_unseal.add_argument("-o", "--output", default=None, help="Output file (default: stdout)")
     p_unseal.set_defaults(func=cmd_unseal)
+
+    # auto
+    p_auto = sub.add_parser("auto", help="Auto-seal using existing dictionary (no markers needed)")
+    p_auto.add_argument("input", nargs="?", default=None, help="Text or file path (or pipe stdin)")
+    p_auto.add_argument("-o", "--output", default=None, help="Output file (default: stdout)")
+    p_auto.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
+    p_auto.set_defaults(func=cmd_auto)
+
+    # scan
+    p_scan = sub.add_parser("scan", help="Scan text for sensitive data (interactive)")
+    p_scan.add_argument("input", nargs="?", default=None, help="Text or file path (or pipe stdin)")
+    p_scan.add_argument("-o", "--output", default=None, help="Output file (default: stdout)")
+    p_scan.set_defaults(func=cmd_scan)
 
     # project
     p_proj = sub.add_parser("project", help="Manage projects")
