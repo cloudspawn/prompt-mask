@@ -36,12 +36,12 @@ def detect_type(value):
         return "project"
     if re.search(r"\b(inc|corp|ltd|sas|sarl|gmbh|llc|group|labs?|co|tech|systems|dynamics|digital|solutions|partners|industries|works)\b", v, re.IGNORECASE):
         return "company"
-    if re.match(r"^[\d\s.,]+[€$£¥kKmM%]?$", v):
+    if re.match(r"^[\d\s.,]+[€$£¥kKmM%]*$", v):
         return "amount"
     return "name"
 
 
-def generate_fake(value, type_name):
+def generate_fake(value, type_name, existing_fakes=None):
     pools = {
         "email": FAKE_EMAILS,
         "company": FAKE_COMPANIES,
@@ -51,6 +51,11 @@ def generate_fake(value, type_name):
     if type_name == "amount":
         return randomize_value(value)
     pool = pools.get(type_name, FAKE_NAMES)
+    used = set(existing_fakes or [])
+    for candidate in pool:
+        if candidate not in used:
+            return candidate
+    # All used, cycle with counter
     key = type_name if type_name in _counters else "name"
     idx = _counters[key]
     _counters[key] = (idx + 1) % len(pool)
@@ -70,7 +75,7 @@ def randomize_value(value):
             factor = 0.7 + random.random() * 0.6
             return f"{prefix}{round(num * factor)}{suffix}"
         except ValueError:
-            pass
+            return v  # return original if date is invalid
 
     # Try as date
     m = re.match(r"^(\d{1,4})([\/-])(\d{1,2})\2(\d{1,4})$", v)
@@ -82,14 +87,15 @@ def randomize_value(value):
         try:
             if parts[2] > 31:  # dd/mm/yyyy
                 d = date(parts[2], parts[1], parts[0])
-                d += timedelta(days=offset)
-                return f"{d.day:02d}{sep}{d.month:02d}{sep}{d.year}"
             else:  # yyyy-mm-dd
                 d = date(parts[0], parts[1], parts[2])
-                d += timedelta(days=offset)
+            d += timedelta(days=offset)
+            if parts[2] > 31:
+                return f"{d.day:02d}{sep}{d.month:02d}{sep}{d.year}"
+            else:
                 return f"{d.year}{sep}{d.month:02d}{sep}{d.day:02d}"
         except ValueError:
-            pass
+            return v  # return original if date is invalid
 
     # Shuffle preserving shape
     chars = list(v)
@@ -118,7 +124,7 @@ def seal(text, project=None):
         if value in d:
             return d[value]
         t = detect_type(value)
-        fake = generate_fake(value, t)
+        fake = generate_fake(value, t, existing_fakes=set(d.values()))
         data["dict"][value] = fake
         data["rdict"][fake] = value
         data["types"][value] = t
@@ -164,3 +170,19 @@ def unseal(text, project=None):
     for fake in sorted(rdict.keys(), key=len, reverse=True):
         result = result.replace(fake, rdict[fake])
     return result
+
+
+def auto_seal(text, project=None):
+    """Replace known dictionary entries in text without markers."""
+    data = storage.load_dict(project)
+    d = data["dict"]
+    result = text
+    count = 0
+    # Sort by length desc to avoid partial replacements
+    for real in sorted(d.keys(), key=len, reverse=True):
+        fake = d[real]
+        occurrences = result.count(real)
+        if occurrences > 0:
+            result = result.replace(real, fake)
+            count += occurrences
+    return result, count
