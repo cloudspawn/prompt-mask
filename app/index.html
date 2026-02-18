@@ -790,7 +790,7 @@ function detectType(value) {
     const v = value.trim();
     if (/^[\w.+-]+@[\w-]+\.[\w.]+$/.test(v)) return 'email';
     if (/\b(project|projet)\s/i.test(v)) return 'project';
-    if (/\b(inc|corp|ltd|sas|sarl|gmbh|llc|group|labs?|co)\b/i.test(v)
+    if (/\b(inc|corp|ltd|sas|sarl|gmbh|llc|group|labs?|co|tech|systems|dynamics|digital|solutions|partners|industries|works)\b/i.test(v)
         || /[A-Z].*[A-Z].*(&|\band\b)/.test(v)) return 'company';
     if (/^[\d\s.,]+[€$£¥kKmM%]?$/.test(v)) return 'amount';
     return 'name';
