@@ -27,3 +27,4 @@ Thumbs.db
 *.encsrc/prompt_mask.egg-info/
 backup.json
 *.sh
+*.sh
